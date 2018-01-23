@@ -1,0 +1,46 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+        printf "usage: $0 <url> <doc_root>\n"
+        exit
+fi
+
+printf "*** This script will do the folowing:\n"
+printf "  - Configure site using template.conf\n"
+printf "  - Call certbot to obtain a LetsEncrypt cert\n"
+
+printf "\nDo you want to continue?(y/n) "
+read REPLY
+
+case $REPLY in
+        [Yy])
+                printf "*** Create directories ...  "
+                cd /var/www
+                mkdir $2 > /dev/null 2>&1
+                mkdir $2/public_html > /dev/null 2>&1
+                mkdir $2/logs > /dev/null 2>&1
+                mkdir $2/data > /dev/null 2>&1
+                printf "\x1B[32mDONE!\x1B[37m\n"
+
+                printf "*** Updating permissions ...  "
+                chown -R nginx:nginx $2 > /dev/null 2>&1
+                chmod -R 755 $2 > /dev/null 2>&1
+                printf "\x1B[32mDONE!\x1B[37m\n"
+
+                printf "*** Configuring ...  "
+                cd /etc/nginx/conf.d
+                sudo cp template $2 > /dev/null 2>&1
+                sed -i "s/SERVER_URL/$1/g" $2 > /dev/null 2>&1
+                sed -i "s/DOCUMENT_ROOT/$2/g" $2 > /dev/null 2>&1
+                printf "\x1B[32mDONE!\x1B[37m\n"
+
+                printf "*** Installing certificates ... \n"
+                certbot --nginx -d $1
+                rc-service nginx restart
+                printf "\n\x1B[32mDONE!\x1B[37m\n"
+                exit
+        ;;
+        *)
+                printf "\n*** Script aborted without changes ...\n'"
+        ;;
+esac
